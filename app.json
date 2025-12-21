@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "ConsentLocker",
+    "slug": "consent-locker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "consentlocker",
+    "platforms": ["ios", "android", "web"],
+    "assetBundlePatterns": ["**/*"],
+    "plugins": []
+  }
+}
+
