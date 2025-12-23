@@ -57,6 +57,11 @@ const ConnectionDetailScreen: React.FC<Props> = ({ route }) => {
   const [activeObligationId, setActiveObligationId] = useState<string | null>(
     (INITIAL_OBLIGATIONS_BY_CONNECTION[connection.id] ?? [])[0]?.id ?? null
   );
+  const [confirmRevokeOpen, setConfirmRevokeOpen] = useState(false);
+  const [confirmRejectOpen, setConfirmRejectOpen] = useState(false);
+  const [pendingDecision, setPendingDecision] = useState<{ id: string; decision: ObligationStatus } | null>(
+    null
+  );
 
   useEffect(() => {
     const load = async () => {
@@ -120,9 +125,18 @@ const ConnectionDetailScreen: React.FC<Props> = ({ route }) => {
     setResourceModalOpen(false);
   };
 
-  const handleDecision = async (obligationId: string, decision: ObligationStatus) => {
+  const persistDecision = async (obligationId: string, decision: ObligationStatus) => {
     const next = obligations.map((o) => (o.id === obligationId ? { ...o, status: decision } : o));
     await persistObligations(next);
+  };
+
+  const handleDecision = async (obligationId: string, decision: ObligationStatus) => {
+    if (decision === "Rejected") {
+      setPendingDecision({ id: obligationId, decision });
+      setConfirmRejectOpen(true);
+      return;
+    }
+    await persistDecision(obligationId, decision);
   };
 
   const handleEdit = (obligation: Obligation) => {
@@ -157,6 +171,7 @@ const ConnectionDetailScreen: React.FC<Props> = ({ route }) => {
 
   const revokeConnection = async () => {
     await persistStatus("Revoked");
+    setConfirmRevokeOpen(false);
   };
   const establishConnection = async () => {
     await persistStatus("Established");
@@ -169,51 +184,54 @@ const ConnectionDetailScreen: React.FC<Props> = ({ route }) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 28 }}>
-      <Card style={styles.card}>
-        <Card.Content>
-          <View style={styles.headerRow}>
-            <Text variant="titleLarge">{connection.name}</Text>
-            <StatusBadge status={connectionStatus} />
-          </View>
-          <Text variant="bodyMedium" style={{ marginTop: 4 }}>
-            Host: {connection.host.name} ({connection.host.locker})
-          </Text>
-          <Text variant="bodyMedium">
-            Guest: {connection.guest.name} ({connection.guest.locker})
-          </Text>
-          {isHost && obligations[0] && !isRevoked && (
-            <Button
-              mode="contained"
-              style={{ marginTop: 12, marginBottom: 6, borderRadius: 12 }}
-              onPress={() => setManageModalOpen(true)}
-            >
-              Manage Consent Artefacts
-            </Button>
-          )}
-          {!isRevoked ? (
-            <Button
-              mode="outlined"
-              style={{ marginTop: 8, borderRadius: 12 }}
-              onPress={revokeConnection}
-            >
-              Revoke Connection
-            </Button>
-          ) : (
-            <Button
-              mode="contained-tonal"
-              style={{ marginTop: 8, borderRadius: 12 }}
-              onPress={establishConnection}
-            >
-              Establish Connection
-            </Button>
-          )}
-          {isRevoked && (
-            <Text variant="bodySmall" style={{ marginTop: 6, color: "#c62828" }}>
-              Connection Revoked — actions are disabled until re-established.
+        <Text variant="titleMedium" style={{ marginTop: 8, marginBottom: 8 }}>
+          Connection Information
+        </Text>
+        <Card style={styles.card}>
+          <Card.Content>
+            <View style={styles.headerRow}>
+              <Text variant="titleLarge">{connection.name}</Text>
+              <StatusBadge status={connectionStatus} />
+            </View>
+            <Text variant="bodyMedium" style={{ marginTop: 4 }}>
+              Host: {connection.host.name} ({connection.host.locker})
             </Text>
-          )}
-        </Card.Content>
-      </Card>
+            <Text variant="bodyMedium">
+              Guest: {connection.guest.name} ({connection.guest.locker})
+            </Text>
+            {isHost && obligations[0] && !isRevoked && (
+              <Button
+                mode="contained"
+                style={{ marginTop: 12, marginBottom: 6, borderRadius: 12 }}
+                onPress={() => setManageModalOpen(true)}
+              >
+                Manage Consent Artefacts
+              </Button>
+            )}
+            {!isRevoked ? (
+              <Button
+                mode="outlined"
+                style={{ marginTop: 8, borderRadius: 12 }}
+                onPress={() => setConfirmRevokeOpen(true)}
+              >
+                Revoke Connection
+              </Button>
+            ) : (
+              <Button
+                mode="contained-tonal"
+                style={{ marginTop: 8, borderRadius: 12 }}
+                onPress={establishConnection}
+              >
+                Establish Connection
+              </Button>
+            )}
+            {isRevoked && (
+              <Text variant="bodySmall" style={{ marginTop: 6, color: "#c62828" }}>
+                Connection Revoked — actions are disabled until re-established.
+              </Text>
+            )}
+          </Card.Content>
+        </Card>
 
       {!isHost && obligations.length > 1 && (
         <Card style={[styles.card, { marginTop: 12 }]}>
@@ -239,14 +257,17 @@ const ConnectionDetailScreen: React.FC<Props> = ({ route }) => {
         </Card>
       )}
 
-      <Text variant="titleMedium" style={{ marginTop: 16, marginBottom: 6 }}>
-        Active Consent Artefact
-      </Text>
-      <Text variant="bodySmall" style={{ marginBottom: 8 }}>
-        {isHost
-          ? "Host can select resources and edit artefact metadata. Guest will review and approve/reject."
-          : "Review the consent artefacts and approve or reject. Resource selection is host-only."}
-      </Text>
+        <Text variant="titleMedium" style={{ marginTop: 16, marginBottom: 6 }}>
+          Consent Artefacts
+        </Text>
+        <Text variant="titleSmall" style={{ marginBottom: 4 }}>
+          Active Consent Artefact
+        </Text>
+        <Text variant="bodySmall" style={{ marginBottom: 8 }}>
+          {isHost
+            ? "Host can select resources and edit artefact metadata. Guest will review and approve/reject."
+            : "Review the consent artefacts and approve or reject. Resource selection is host-only."}
+        </Text>
 
       {activeObligation ? (
         <ObligationCard
@@ -265,7 +286,12 @@ const ConnectionDetailScreen: React.FC<Props> = ({ route }) => {
       ) : (
         <Card style={{ marginVertical: 8 }}>
           <Card.Content>
-            <Text>No consent artefacts available.</Text>
+            <Text variant="titleSmall" style={{ marginBottom: 4 }}>
+              No Consent Artefacts Yet
+            </Text>
+            <Text variant="bodySmall">
+              The host has not created any consent artefacts for this connection.
+            </Text>
           </Card.Content>
         </Card>
       )}
@@ -405,6 +431,74 @@ const ConnectionDetailScreen: React.FC<Props> = ({ route }) => {
           <Button mode="outlined" onPress={() => setManageModalOpen(false)} style={{ marginTop: 12 }}>
             Close
           </Button>
+        </Modal>
+
+        <Modal
+          visible={confirmRevokeOpen}
+          onDismiss={() => setConfirmRevokeOpen(false)}
+          contentContainerStyle={[
+            styles.modalContainer,
+            { backgroundColor: theme.colors.background, borderColor: theme.colors.outline }
+          ]}
+        >
+          <Text variant="titleMedium" style={{ marginBottom: 8 }}>
+            Revoke Connection
+          </Text>
+          <Text variant="bodyMedium" style={{ marginBottom: 12 }}>
+            Revoking this connection will disable all consent actions. You can re-establish it later.
+          </Text>
+          <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
+            <Button onPress={() => setConfirmRevokeOpen(false)} style={{ marginRight: 8 }}>
+              Cancel
+            </Button>
+            <Button mode="contained" onPress={revokeConnection} buttonColor="#c62828">
+              Revoke
+            </Button>
+          </View>
+        </Modal>
+
+        <Modal
+          visible={confirmRejectOpen}
+          onDismiss={() => {
+            setConfirmRejectOpen(false);
+            setPendingDecision(null);
+          }}
+          contentContainerStyle={[
+            styles.modalContainer,
+            { backgroundColor: theme.colors.background, borderColor: theme.colors.outline }
+          ]}
+        >
+          <Text variant="titleMedium" style={{ marginBottom: 8 }}>
+            Reject Consent Artefact
+          </Text>
+          <Text variant="bodyMedium" style={{ marginBottom: 12 }}>
+            Are you sure you want to reject this consent artefact? This action can be reversed only by
+            re-approval.
+          </Text>
+          <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
+            <Button
+              onPress={() => {
+                setConfirmRejectOpen(false);
+                setPendingDecision(null);
+              }}
+              style={{ marginRight: 8 }}
+            >
+              Cancel
+            </Button>
+            <Button
+              mode="contained"
+              buttonColor="#c62828"
+              onPress={async () => {
+                if (pendingDecision) {
+                  await persistDecision(pendingDecision.id, pendingDecision.decision);
+                }
+                setConfirmRejectOpen(false);
+                setPendingDecision(null);
+              }}
+            >
+              Reject
+            </Button>
+          </View>
         </Modal>
       </Portal>
       </ScrollView>

@@ -44,6 +44,11 @@ const ConnectionsScreen = () => {
             Connections
           </Text>
         }
+        ListEmptyComponent={
+          <Text variant="bodyMedium" style={{ paddingVertical: 12 }}>
+            No Connections Available{"\n"}You currently have no active connections with other organizations.
+          </Text>
+        }
         contentContainerStyle={{ paddingBottom: 16 }}
       />
     </View>
