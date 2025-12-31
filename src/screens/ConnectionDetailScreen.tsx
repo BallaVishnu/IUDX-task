@@ -119,7 +119,9 @@ const ConnectionDetailScreen: React.FC<Props> = ({ route }) => {
     }
     const resource = RESOURCES.find((r) => r.id === selectedResourceId);
     const next = obligations.map((o) =>
-      o.id === selectedObligationId ? { ...o, dataElement: resource?.name, status: "Pending" } : o
+      o.id === selectedObligationId
+        ? { ...o, dataElement: resource?.name, status: "Pending" as ObligationStatus }
+        : o
     );
     await persistObligations(next);
     setResourceModalOpen(false);
@@ -182,11 +184,8 @@ const ConnectionDetailScreen: React.FC<Props> = ({ route }) => {
   const activeObligation = obligations.find((o) => o.id === activeObligationId) ?? obligations[0];
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={["left","right", "bottom"]} style ={styles.safeArea}>
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 28 }}>
-        <Text variant="titleMedium" style={{ marginTop: 8, marginBottom: 8 }}>
-          Connection Information
-        </Text>
         <Card style={styles.card}>
           <Card.Content>
             <View style={styles.headerRow}>

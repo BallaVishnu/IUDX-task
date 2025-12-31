@@ -50,7 +50,7 @@ const ObligationCard: React.FC<Props> = ({
         >
           <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
             <Text variant="titleMedium">{obligation.name}</Text>
-            <Paragraph>{roleLabel}</Paragraph>
+            
           </View>
           <View style={{ marginTop: 4 }}>
             <StatusBadge status={obligation.status} />
@@ -58,7 +58,6 @@ const ObligationCard: React.FC<Props> = ({
         </View>
         <Paragraph>Purpose: {obligation.purpose}</Paragraph>
         <Paragraph>Transaction: {obligation.transactionType}</Paragraph>
-        <Paragraph>Selected resource: {obligation.dataElement || "Not selected"}</Paragraph>
         <View style={{ marginTop: 12 }}>
           <Button
             mode="outlined"
@@ -77,7 +76,7 @@ const ObligationCard: React.FC<Props> = ({
               contentStyle={{ justifyContent: "center" }}
               disabled={disabledActions}
             >
-              Select Resource
+              {obligation.dataElement ? `Selected Resource: ${obligation.dataElement}` : "Select Resource"}
             </Button>
           )}
           {canEdit && (
@@ -99,13 +98,12 @@ const ObligationCard: React.FC<Props> = ({
               Opposite user review
             </Text>
             <SegmentedButtons
-              value={draftDecision}
+              value={draftDecision ?? ""}
               onValueChange={(value) => setDraftDecision(value as ObligationStatus)}
               buttons={[
                 { label: "Approve", value: "Approved" },
                 { label: "Reject", value: "Rejected" }
               ]}
-              disabled={disabledActions}
             />
             <Button
               mode="contained"
